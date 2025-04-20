@@ -2,33 +2,35 @@ import pandas as pd
 import glob
 import os
 
-
 caminho_diretorio = r"Microdados_Enade_2023\DADOS"
 
-# Listar todos os arquivos que começam com "microdados2022_arq" e terminam em ".txt"
-arquivos = glob.glob(os.path.join(caminho_diretorio, "microdados2023_arq*.txt"))
+# Buscar todos os arquivos .csv com padrão especificado
+arquivos = glob.glob(os.path.join(caminho_diretorio, "microdados2023_arq*.csv"))
 
-# Criar uma lista para armazenar os DataFrames
 dfs = []
+colunas_existentes = set()
 
-# Ler cada arquivo e adicioná-lo à lista
 for arquivo in arquivos:
-    df = pd.read_csv(arquivo, delimiter=";", encoding="latin1")  # Ajuste o delimitador se necessário
-    dfs.append(df)
+    df = pd.read_csv(arquivo, delimiter=";", encoding="latin1")
+    
+    # Filtra apenas colunas ainda não adicionadas
+    colunas_novas = [col for col in df.columns if col not in colunas_existentes]
+    
+    if colunas_novas:
+        dfs.append(df[colunas_novas])
+        colunas_existentes.update(colunas_novas)
 
-# Concatenar todos os DataFrames
-df_final = pd.concat(dfs, ignore_index=True)
+# Concatena os dados horizontalmente (colunas diferentes, mesmas linhas)
+df_final = pd.concat(dfs, axis=1)
 
-# Gerar a base de dados final filtrando por curso (CO_GRUPO) e região do Brasil (CO_REGIAO_CURSO)
-# 6411 e 4 são "Engenharia de Computacão I" e "Sul", respectivamente.
+# Filtrar por curso e região
 df_final = df_final[
     (df_final["CO_GRUPO"] == 6411) & 
-    (df_final["CO_REGIAO_CURSO"] == 4)]
+    (df_final["CO_REGIAO_CURSO"] == 4)
+]
 
-# Exibir a quantidade de linhas e colunas. São 887 linhas e 125 colunas.
+# Exibe amostra
 print(df_final.head())
 
-# Gerar a base de dados final em CSV
+# Salva resultado
 df_final.to_csv(os.path.join(caminho_diretorio, "base_final.csv"), index=False, sep=";")
-
-
